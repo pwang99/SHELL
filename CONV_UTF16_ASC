@@ -1,0 +1,52 @@
+#!/bin/ksh
+
+PATH=/usr/bin:/bin:/usr/local/bin:/usr/sbin
+export PATH
+
+#SRC=/disce/datastore/2015_Lung_COH/
+#SRC=/disce/datastore/2017_BSBC/BR2082A_Olympus/BR2082A_I100_HE
+#SRC=/disce/datastore/2017_BSBC/BR725
+#SRC=/disce/datastore/2017_BSBC/BR2082A
+SRC=/disce/datastore/2015_Lung_COH/LC811_SCLC
+
+cd $SRC
+
+for UTF_FILE in `find . -name XYZPositions.txt`
+do
+        OUTPUT=""
+        UTF_PATH=${UTF_FILE%/XYZPositions.txt}
+        cd $SRC/${UTF_PATH}
+
+        [[ -f XYZPositions.txt ]] && OUTPUT=`/usr/bin/file -bi XYZPositions.txt`
+
+        if [[ `echo $OUTPUT | /bin/grep "utf-16le" ` > /dev/null ]]
+        then
+                /bin/cp -rp $SRC/${UTF_PATH}/XYZPositions.txt /home/pwang/DATA
+                /bin/cp -rp XYZPositions.txt XYZPositions.txt.ORIG
+                /usr/bin/iconv -f UTF-16 -t UTF-8 XYZPositions.txt.ORIG | /usr/bin/dos2unix > XYZPositions.txt
+                /bin/chmod 664 XYZPositions.txt
+                /bin/ls -l XYZPositions.txt
+        elif  [[ `echo $OUTPUT | /bin/grep ascii ` > /dev/null ]]
+        then
+                echo "$SRC/${UTF_PATH}/XYZPositions.txt is ASCII file"
+        else
+                echo "No diea"
+        fi
+
+#for i in `cat /home/pwang/tetx `
+#for i in `cat /home/pwang/pwang.123 `
+#do
+#       PATH=`echo $i |/bin/awk -F"\/" '{print $4}' ` 
+#       /bin/ls ${DST}/*/${PATH}/XYZPositions.txt 
+#       echo "$SRC/$i"
+#       [[ ! -f ${DST}/*/${PATH}/XYZPositions.txt ]] && echo "${DST}/*/${PATH}/XYZPositions.txt"
+#       [[ ! -f $SRC/$i ]] && echo "$SRC/$i"
+#       /bin/cp -rp ${DST}/*/${PATH}/XYZPositions.txt $SRC/$i
+
+#       PATH=${i%/XYZPositions.txt}
+#       cd  $SRC/$PATH
+#       /bin/cp XYZPositions.txt XYZPositions.txt.ORIG 
+#       /usr/bin/iconv -f UTF-16 -t UTF-8 XYZPositions.txt.ORIG | /usr/bin/dos2unix > XYZPositions.txt 
+#       /bin/chmod 664 XYZPositions.txt
+#       /bin/ls -l XYZPositions.txt
+done
