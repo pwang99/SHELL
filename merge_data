@@ -1,0 +1,125 @@
+#!/bin/ksh
+
+AGIL_SRC=/discf/datastore/2017_BSBC/BR2082A_Agilent/BR2082A
+#AGIL_SRC=/discf/datastore/2017_BSBC/BR725_Agilent/BR725_C086
+OLYM_SRC=/discf/datastore/2017_BSBC/BR2082A_Olympus/BR2082A_I100_HE
+#OLYM_SRC=/discf/datastore/2017_BSBC/BR725_Olympus
+DST=/disce/datastore/2017_BSBC/BR2082A
+#DST=/storage/disce/datastore/2017_BSBC/BR725
+
+merge_data_AGIL() {
+
+    #COPY CSV & BMP file to th root level of DEST 
+    cd $AGIL_SRC && cp -rp *.bmp *.csv $DST
+    cd $OLYM_SRC && cp -rp *.bmp *.csv $DST
+
+    # Meger data from both dirs -- Preprocessed & BR2082A
+
+#    cd $AGIL_SRC/Preprocessed/BR725
+    cd $AGIL_SRC/Preprocessed
+    for DIR in `ls -d *`
+    do
+        UPPER_DIR=`echo $DIR | tr "a-z" "A-Z"` 
+
+        [[ ! -d $DST/$UPPER_DIR ]] && mkdir -p $DST/${UPPER_DIR}
+        cp -rp $DIR/* $DST/${UPPER_DIR} 
+    done
+
+    UPPER_DIR="" && cd $AGIL_SRC
+
+    for DIR in `ls -d BR*_[0-9][0-9][0-9][0-9]`
+    do
+        cd $AGIL_SRC/$DIR
+        UPPER_DIR=`echo $DIR | tr "a-z" "A-Z"`
+        [[ ! -d $DST/${UPPER_DIR} ]] && mkdir -p $DST/${UPPER_DIR}
+        for FILE_DIR in `ls`
+        do
+             if [ -d $FILE_DIR ]; then 
+                 cp -rp $FILE_DIR $DST/${UPPER_DIR}
+             elif [ -f $FILE_DIR ]; then
+                 [[ ! -d $DST/${UPPER_DIR}/DMD ]] && mkdir -p $DST/${UPPER_DIR}/DMD
+                 cp -rp $FILE_DIR $DST/${UPPER_DIR}/DMD/ 
+             else
+                  echo "$AGIL_SRC/$DIR/$FILE_DIR is not right" 
+             fi
+         done
+    done
+}
+
+format_data() {
+
+    cd $DST/ 
+    for TDIR in `ls -d BR*_[0-9][0-9][0-9][0-9]`
+    do 
+        cd $DST/$TDIR
+        for TOP_DIR in CA DMD HE SPP
+        do
+            if [ -d $DST/$TDIR/$TOP_DIR ]; then
+                cd $DST/$TDIR/$TOP_DIR
+                for SUB_DIR in `ls -d *`
+                do
+                echo $DST/$TDIR/$TOP_DIR
+                    if [ -d $SUB_DIR ]; then
+                        UPPER_SUB_DIR=`echo $SUB_DIR | tr "a-z" "A-Z"`
+                        [[ $UPPER_SUB_DIR != $SUB_DIR ]] && mv $SUB_DIR $UPPER_SUB_DIR
+                    fi
+
+    # Create CA symbolic
+
+                    if [ $TOP_DIR == "CA" ]; then
+                        cd $DST
+                        for LINK_FILE in `ls *.bmp *.csv`
+                        do
+                            cd $DST/$TDIR/CA/$UPPER_SUB_DIR
+                            ln -s $DST/$LINK_FILE .
+                        done 
+                    fi
+
+     # Create HE symbolic back to CA DIR
+
+                    if [ -d $DST/$TDIR/HE ]; then
+                        cd $DST/$TDIR/HE
+                        for HE_DIR in `ls -d *_HE`
+                        do
+                            cd $DST/${TDIR}/CA/$UPPER_SUB_DIR
+                            [[ -d $DST/$TDIR/HE/$HE_DIR ]] && ln -s $DST/$TDIR/HE/$HE_DIR .
+                            cd $DST/$TDIR/HE/$HE_DIR/
+                            for HE_FILE in `ls *_HE.bmp `
+                            do
+                                cd $DST/$TDIR/CA/$UPPER_SUB_DIR && ln -s $DST/$TDIR/HE/$HE_DIR/*_HE.bmp . 
+                            done
+                        done
+                    fi
+                    cd $DST/$TDIR/$TOP_DIR
+                done 
+            fi
+        done
+        cd $DST/$TDIR
+    done
+}
+
+merge_data_OLYM() {
+    cd $OLYM_SRC
+    for DIR in `ls -d *_HE`
+    do
+        UPPER_DIR="" && set -A array "" "" "" ""
+        set -A array `echo $DIR |sed 's/_/ /g' `
+        UPPER_DIR="${array[0]}_${array[2]}"
+        [[ ! -d $DST/$UPPER_DIR ]] && mkdir -p $DST/$UPPER_DIR && echo "CA does not exist $UPPER_DIR "
+        mkdir -p $DST/${UPPER_DIR}/HE && cd $OLYM_SRC && cp -rp $DIR $DST/${UPPER_DIR}/HE
+     done
+
+}
+
+XML_data() { 
+
+     XML_DIR=$DST/${UPPER_DIR}/XML
+     [[ ! -d $XML_DIR ]] && mkdir -p $XML_DIR
+}
+
+[[ ! -d $DST ]] && mkdir -p $DST && chmod 755 $DST
+
+merge_data_AGIL
+merge_data_OLYM
+format_data
+XML_data
