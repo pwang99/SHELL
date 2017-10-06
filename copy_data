@@ -1,0 +1,84 @@
+#!/bin/ksh
+
+#
+# Version: 1.0.1
+#
+# SCANDIR has the form <tma>_<slice>_<rowcol>_<scanner>_<sentinel>
+#
+#
+# Please EDITOR the following varables:
+#
+#DEF_TARGET="CHLC13"
+#
+#
+# Please DO NOT EDITOR anything below
+#
+SENTINEL_LIST="HE TTF1 P40 PDL1"
+
+CP_DATA() {
+
+   cd $DET_ROOT_DIR/$DEF_TARGET/${array[0]}_${array[2]}/${array[4]}
+   cp -rp $SRC_ROOT_DIR/$SRC_DIR/$POT_TARGET ${array[0]}_${array[1]}_${array[2]}_${array[3]}_${array[4]} 
+   chmod -R 775 ${array[0]}_${array[1]}_${array[2]}_${array[3]}_${array[4]}
+   cd ${array[0]}_${array[1]}_${array[2]}_${array[3]}_${array[4]}
+   TARGET_FILE=`echo $POT_TARGET |awk -F"/" '{print $1}'`
+   /bin/mv ${TARGET_FILE}.* $DET_ROOT_DIR/$DEF_TARGET/${array[0]}_${array[2]}/${array[4]}
+   SWS_FILE=${TARGET_FILE}.sws
+   cd $DET_ROOT_DIR/$DEF_TARGET/${array[0]}_${array[2]}/${array[4]}
+   cp -rp $SRC_ROOT_DIR/$SRC_DIR/$SWS_FILE .
+}
+
+#
+WKS="Olympus"
+DEF_TARGET="CHLC09"
+DET_ROOT_DIR=/disce/datastore/2015_Lung_COH/
+
+[[ ! -d $DET_ROOT_DIR ]] && echo "Folder $DET_ROOT_DIR does not exit, please check" && exit 0
+
+for WKS_DIR in $WKS
+do
+   SRC_ROOT_DIR="/disce/2015_Lung_COH/COH_${WKS_DIR}"
+   
+   [[ ! -d $SRC_ROOT_DIR ]] && echo "Folder $SRC_ROOT_DIR does not exit, please check" && exit 0
+
+   cd $SRC_ROOT_DIR
+   for LIST_TARGET in $DEF_TARGET
+   do
+        for SRC_DIR in `ls -d ${LIST_TARGET}*`
+        do
+            cd $SRC_ROOT_DIR/$SRC_DIR
+            for POT_TARGET in `ls -d */`
+            do
+                set -A array "" "" "" "" ""         
+                cd $SRC_ROOT_DIR/$SRC_DIR
+                set -A array `ls -d $POT_TARGET |sed 's/_/ /g'` 
+
+                for SENTINEL in $SENTINEL_LIST 
+                do
+                    DONE=FALSE
+                    [[ ${array[4]} = ${SENTINEL}"/" ]] && DONE=TRUE && break
+                done
+
+                if [ $DONE = "TRUE" ]; then
+
+                    [[ ! -d $DET_ROOT_DIR/$DEF_TARGET ]] && mkdir -p $DET_ROOT_DIR/$DEF_TARGET && chmod 775 $DET_ROOT_DIR/$DEF_TARGET 
+                    cd $DET_ROOT_DIR/$DEF_TARGET
+
+                    if [[ ! -d ${array[0]}_${array[2]} ]]; then
+                        mkdir -p ${array[0]}_${array[2]}/${array[4]}  
+                        chmod -R 775 ${array[0]}_${array[2]} && chmod -R 775 ${array[0]}_${array[2]}/${array[4]}
+                        CP_DATA
+                    else
+                        cd ${array[0]}_${array[2]}
+                        if [[ ! -d ${array[4]} ]]; then
+                        mkdir -p ${array[4]} &&  chmod -R 775 ${array[4]} && CP_DATA
+                        else
+                            cd ${array[4]}
+                            [[ ! -d ${array[0]}_${array[1]}_${array[2]}_${array[3]}_${array[4]} ]] && CP_DATA
+                        fi
+                    fi
+                fi
+            done
+        done
+    done
+done
