@@ -1,0 +1,61 @@
+#!/bin/ksh
+#
+#COPY DATA from storage to surface
+#
+
+#SRC="/disce/datastore/2015_Lung_COH/CHLC08"
+SRC="/disce/datastore/2015_Lung_COH/CHLC15"
+
+copy_data() {
+
+DST="${SRC}/${AA_FILE}"
+
+# Symbolic LINK HE PDL1 TTF1 P40
+
+cd $SRC/${array[0]}
+
+for SETI in HE PDL1 TTF1 P40
+do
+    cd ${SRC}/${array[0]}/${SETI}
+    for LINK in `ls`
+    do
+        EXT_XML=`echo $LINK |awk -F"." '{print $2}' `
+        if [[ $EXT_XML == "xml" ]]; then
+           cd ${SRC}/${array[0]}/${SETI}
+           if [[ -f ../XML/$LINK ]]; then
+                mv $LINK dup_delete_${LINK}
+           else  
+                mv $LINK $SRC/${array[0]}/XML
+           fi
+           ln -s ../XML/$LINK .
+
+           cd $DST 
+           ln -s ../../XML/${LINK} .
+        else   
+           cd $DST
+           ln -s ../../${SETI}/${LINK} . 
+        fi
+     done
+done
+
+reticleCoord=`echo ${array[2]} |awk -F"_" '{printf "%s_%s", $1,$2}' `
+cd ${SRC}
+for reticleCoord_FILE in `ls ${reticleCoord}_*_SH*_reticleCoord.csv`
+do
+    cd $DST 
+    ln -s ../../../${reticleCoord_FILE} .
+done 
+echo ""
+
+}
+
+cd $SRC
+for AA_FILE in `ls -d */CA/*_U5A04 `
+do
+        set -A array "" "" ""
+        set -A array `echo $AA_FILE |sed 's/\// /g' `
+
+# echo "${array[0]} ${array[1]} ${array[2]}"
+
+        copy_data
+done
