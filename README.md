@@ -1,2 +1,2 @@
 # SHELL
-Linux Shell
+It is Peter's Linux Shell Repos
